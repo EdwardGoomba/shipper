@@ -19,20 +19,21 @@ const SINGLE_ITEM_QUERY = gql`
 
 const UPDATE_ITEM_MUTATION = gql`
   mutation UPDATE_ITEM_MUTATION(
-    $title: String!
-    $description: String!
-    $price: Int!
-    $image: String
-    $largeImage: String
+    $id: ID!,
+    $title: String,
+    $description: String,
+    $price: Int,
   ) {
-    createItem(
-      title: $title
-      description: $description
+    updateItem(
+      id: $id,
+      title: $title,
+      description: $description,
       price: $price
-      image: $image
-      largeImage: $largeImage
     ) {
       id
+      title
+      description
+      price
     }
   }
 `;
@@ -48,32 +49,34 @@ class UpdateItem extends Component {
     })
   }
 
+  updateItem = async (event, updateItemMutation) => {
+    event.preventDefault()
+    const res = await updateItemMutation({
+      variables: {
+        id: this.props.id,
+        ...this.state,
+      }
+    })
+    console.log('Item Updated')
+  }
+
   render() {
     const { id } = this.props
     return (
       <Query
         query={SINGLE_ITEM_QUERY}
-        variable={{ id }}
+        variables={{ id }}
       >
         {({ data, loading }) => {
           if (loading) return <p>Loading...</p>
+          if (!data) return <p>No Item Found for ID: {id}</p>
           return (
             <Mutation
               mutation={UPDATE_ITEM_MUTATION}
               variables={this.state}
             >
-              {(createItem, { loading, error }) => (
-                <Form
-                  onSubmit={async (event) => {
-                    event.preventDefault()
-                    const res = await createItem()
-                    const { data: { createItem: { id } } } = res
-                    Router.push({
-                      pathname: '/item',
-                      query: { id },
-                    })
-                  }}
-                >
+              {(updateItem, { loading, error }) => (
+                <Form onSubmit={event => this.updateItem(event, updateItem)} >
                   <Error error={error} />
                   <fieldset
                     disabled={loading}
@@ -99,24 +102,24 @@ class UpdateItem extends Component {
                         name="price"
                         placeholder="Price"
                         required
-                        value={price}
+                        defaultValue={data.item.price}
                         onChange={this.handleChange}
                       />
                     </label>
                     <label htmlFor="description">
                       Description
-                <textarea
+                      <textarea
                         id="description"
                         name="description"
                         placeholder="Enter A Description"
                         required
-                        value={description}
+                        defaultValue={data.item.description}
                         onChange={this.handleChange}
                       />
                     </label>
                     <button type="submit">
-                      submit
-              </button>
+                      Save Changes
+                    </button>
                   </fieldset>
                 </Form>
               )}
